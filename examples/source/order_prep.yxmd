@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AlteryxDocument yxmdVer="2024.1">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Tool="AlteryxBasePluginsGui.DbFileInput.DbFileInput" />
+      <Properties>
+        <Annotation><Name>Read orders CSV</Name></Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Tool="AlteryxBasePluginsGui.AlteryxFilter.AlteryxFilter" />
+      <Properties>
+        <Annotation><Name>Keep valid orders</Name></Annotation>
+        <Expression>!IsNull([order_id]) AND [sales_amount] &gt; 0</Expression>
+      </Properties>
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Tool="AlteryxBasePluginsGui.AlteryxFormula.AlteryxFormula" />
+      <Properties>
+        <Annotation><Name>Add sales calculations</Name></Annotation>
+        <FormulaFields>
+          <FormulaField field="profit_amount" expression="[sales_amount] - [cost_amount]" />
+          <FormulaField field="order_size_band" expression="IIF([sales_amount] &gt;= 1000, &quot;Large&quot;, &quot;Standard&quot;)" />
+        </FormulaFields>
+      </Properties>
+    </Node>
+    <Node ToolID="4">
+      <GuiSettings Tool="AlteryxBasePluginsGui.MultiRowFormula.MultiRowFormula" />
+      <Properties>
+        <Annotation><Name>Calculate running sales</Name></Annotation>
+        <FormulaFields>
+          <FormulaField field="running_sales" expression="[Row-1:running_sales] + [sales_amount]" />
+        </FormulaFields>
+      </Properties>
+    </Node>
+    <Node ToolID="5">
+      <GuiSettings Tool="AlteryxBasePluginsGui.AlteryxSummarize.AlteryxSummarize" />
+      <Properties>
+        <Annotation><Name>Summarize by region</Name></Annotation>
+        <SummarizeFields>
+          <SummarizeField field="region" action="GroupBy" />
+          <SummarizeField field="sales_amount" action="Sum" rename="total_sales" />
+          <SummarizeField field="profit_amount" action="Sum" rename="total_profit" />
+          <SummarizeField field="order_id" action="Count" rename="order_count" />
+        </SummarizeFields>
+      </Properties>
+    </Node>
+    <Node ToolID="6">
+      <GuiSettings Tool="AlteryxBasePluginsGui.AlteryxSort.AlteryxSort" />
+      <Properties>
+        <Annotation><Name>Sort highest sales first</Name></Annotation>
+        <SortInfo>
+          <Field field="total_sales" order="Descending" />
+        </SortInfo>
+      </Properties>
+    </Node>
+    <Node ToolID="7">
+      <GuiSettings Tool="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput" />
+      <Properties>
+        <Annotation><Name>Publish regional summary</Name></Annotation>
+      </Properties>
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection><Origin ToolID="1" Connection="Output" /><Destination ToolID="2" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="2" Connection="True" /><Destination ToolID="3" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="3" Connection="Output" /><Destination ToolID="4" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="4" Connection="Output" /><Destination ToolID="5" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="5" Connection="Output" /><Destination ToolID="6" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="6" Connection="Output" /><Destination ToolID="7" Connection="Input" /></Connection>
+  </Connections>
+</AlteryxDocument>

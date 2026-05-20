@@ -1,0 +1,31 @@
+# Local generated migration outputs
+migrated/
+reports/
+
+# Presentations and decks must not be published
+*.ppt
+*.pptx
+*.pptm
+*.odp
+*.key
+
+# Python cache and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Secrets and local configuration
+.env
+.env.*
+*.key
+*.pem
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

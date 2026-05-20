@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workbook version="2024.1">
+  <datasources>
+    <datasource name="sales_orders" caption="Sales Orders">
+      <connection class="textscan" />
+      <column name="[sales_amount]" caption="sales_amount" datatype="real" role="measure" />
+      <column name="[cost_amount]" caption="cost_amount" datatype="real" role="measure" />
+      <column name="[profit_amount]" caption="profit_amount" datatype="real" role="measure">
+        <calculation class="tableau" formula="SUM([sales_amount]) - SUM([cost_amount])" />
+      </column>
+      <column name="[regional_sales_total]" caption="Regional Sales Total" datatype="real" role="measure">
+        <calculation class="tableau" formula="{ FIXED [region] : SUM([sales_amount]) }" />
+      </column>
+      <column name="[running_sales]" caption="Running Sales" datatype="real" role="measure">
+        <calculation class="tableau" formula="RUNNING_SUM(SUM([sales_amount]))" />
+      </column>
+      <column name="[sales_share]" caption="Sales Share" datatype="real" role="measure">
+        <calculation class="tableau" formula="SUM([sales_amount]) / TOTAL(SUM([sales_amount]))" />
+      </column>
+      <column name="[margin_band]" caption="Margin Band" datatype="string" role="dimension">
+        <calculation class="tableau" formula="IF [profit_margin] &gt;= 0.3 THEN 'High' ELSEIF [profit_margin] &gt;= 0.15 THEN 'Medium' ELSE 'Low' END" />
+      </column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name="Sales Overview" />
+    <worksheet name="Trend Review" />
+  </worksheets>
+  <dashboards>
+    <dashboard name="Executive Sales Review" />
+  </dashboards>
+</workbook>

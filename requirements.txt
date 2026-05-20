@@ -1,0 +1,4 @@
+# The default converter path uses only the Python standard library.
+#
+# Optional LLM-assisted translation support:
+# pip install openai
