@@ -1,6 +1,7 @@
 # Local generated migration outputs
 migrated/
 reports/
+generated_scenarios/
 
 # Presentations and decks must not be published
 *.ppt

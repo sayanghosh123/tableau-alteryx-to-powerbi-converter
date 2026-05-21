@@ -8,6 +8,19 @@ An offline-first migration accelerator that inspects Tableau workbook XML (`.twb
 
 The converter is designed to reduce discovery and first-pass translation effort. It does **not** claim one-click parity with existing Tableau dashboards or Alteryx workflows; generated artifacts require validation before production use.
 
+## Proof suite
+
+The repo includes a deterministic synthetic proof suite covering **20 Tableau report scenarios** and **20 Alteryx workflow scenarios**. The suite is designed to show what the accelerator handles, where it creates review-ready scaffolds, and where human validation remains required.
+
+| Evidence | Scope |
+| --- | --- |
+| `scenario_suite.py` | Catalog of 40 domain-neutral synthetic scenarios |
+| `tests/test_migrate.py` | End-to-end tests that run every paired Tableau/Alteryx scenario through the CLI |
+| `docs/scenario-coverage.md` | Scenario-by-scenario coverage matrix |
+| `docs/confidence-ratings.md` | Confidence rubric and review expectations |
+| `docs/known-limitations.md` | Explicit boundaries to avoid overpromising |
+| `docs/validation-methodology.md` | What automated checks prove and what still needs human review |
+
 ## Repository layout
 
 ```text
@@ -16,8 +29,12 @@ The converter is designed to reduce discovery and first-pass translation effort.
 │   └── source/
 │       ├── sales_analytics.twb   # Synthetic Tableau workbook sample
 │       └── order_prep.yxmd       # Synthetic Alteryx workflow sample
+├── docs/                         # Coverage, confidence, validation, and limitation notes
+├── scripts/
+│   └── generate_scenarios.py      # Optional materializer for the synthetic scenario catalog
 ├── tests/
 │   └── test_migrate.py           # Smoke and structural regression tests
+├── scenario_suite.py              # 20 Tableau + 20 Alteryx synthetic scenario definitions
 ├── migrate.py                    # Main converter CLI
 ├── requirements.txt              # Optional LLM dependency notes
 └── README.md
@@ -115,7 +132,15 @@ Run the included checks:
 python -m unittest discover -s tests -v
 ```
 
-The tests compile the CLI, run the sample migration into a temporary folder, and check that generated TMDL/M/report artifacts are structurally coherent and free from restricted sample identifiers.
+The tests compile the CLI, run the sample migration, run 20 paired Tableau/Alteryx scenario cases into temporary folders, and check that generated TMDL/M/report artifacts are structurally coherent and free from restricted sample identifiers.
+
+To materialize the synthetic scenario inputs for inspection:
+
+```bash
+python scripts/generate_scenarios.py --output generated_scenarios
+```
+
+See `docs/using-the-suite.md` for details.
 
 For a real migration, validate at least:
 

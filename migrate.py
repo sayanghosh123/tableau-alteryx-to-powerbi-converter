@@ -272,6 +272,16 @@ class AnalyzerAgent:
         "Sort": 0.5,
         "Summarize": 1.5,
         "Union": 2.0,
+        "Unique": 1.0,
+        "Sample": 0.5,
+        "RecordID": 0.5,
+        "TextToColumns": 1.0,
+        "Transpose": 2.0,
+        "CrossTab": 2.0,
+        "DataCleansing": 1.0,
+        "Regex": 2.5,
+        "DateTime": 1.0,
+        "AppendFields": 2.5,
         "Unknown": 4.0,
     }
 
@@ -470,9 +480,10 @@ class TranslatorAgent:
                     f'(t as table) => Table.AddColumn(t, "{_escape_m_text(col_name)}", '
                     f"each {_alteryx_expr_to_m(col_expr)}, type any)"
                 )
+            transform_text = ",\n            ".join(transforms)
             code = (
                 f"{step_name} = List.Accumulate(\n"
-                f"        {{\n            {',\n            '.join(transforms)}\n"
+                f"        {{\n            {transform_text}\n"
                 f"        }},\n"
                 f"        {previous},\n"
                 f"        (state as table, transform as function) => transform(state)\n"
@@ -527,6 +538,114 @@ class TranslatorAgent:
                 code = f"{step_name} = {previous}"
                 flags.append("No selected fields found")
             return MigrationResult(tool.annotation, "Select", "m_step", code, 82.0, flags, output_name=step_name)
+
+        if tool.tool_type == "Unique":
+            fields = tool.config.get("unique_fields") or ["order_id"]
+            field_text = ", ".join(f'"{_escape_m_text(field)}"' for field in fields)
+            code = f"{step_name} = Table.Distinct({previous}, {{{field_text}}})"
+            return MigrationResult(tool.annotation, "Unique", "m_step", code, 88.0, [], output_name=step_name)
+
+        if tool.tool_type == "Sample":
+            count = tool.config.get("count", "100")
+            code = f"{step_name} = Table.FirstN({previous}, {count})"
+            return MigrationResult(tool.annotation, "Sample", "m_step", code, 86.0, [], output_name=step_name)
+
+        if tool.tool_type == "RecordID":
+            field_name = tool.config.get("field_name", "row_id")
+            start = tool.config.get("start", "1")
+            code = f'{step_name} = Table.AddIndexColumn({previous}, "{_escape_m_text(field_name)}", {start}, 1, Int64.Type)'
+            return MigrationResult(tool.annotation, "RecordID", "m_step", code, 92.0, [], output_name=step_name)
+
+        if tool.tool_type == "TextToColumns":
+            source_field = tool.config.get("field", "combined_value")
+            delimiter = tool.config.get("delimiter", "|")
+            columns = tool.config.get("columns") or [f"{source_field}_1", f"{source_field}_2"]
+            column_text = ", ".join(f'"{_escape_m_text(column)}"' for column in columns)
+            code = (
+                f'{step_name} = Table.SplitColumn({previous}, "{_escape_m_text(source_field)}", '
+                f'Splitter.SplitTextByDelimiter("{_escape_m_text(delimiter)}", QuoteStyle.Csv), {{{column_text}}})'
+            )
+            return MigrationResult(tool.annotation, "TextToColumns", "m_step", code, 82.0, [], output_name=step_name)
+
+        if tool.tool_type == "Transpose":
+            key_fields = tool.config.get("key_fields") or ["order_id"]
+            key_text = ", ".join(f'"{_escape_m_text(field)}"' for field in key_fields)
+            code = f'{step_name} = Table.UnpivotOtherColumns({previous}, {{{key_text}}}, "Attribute", "Value")'
+            return MigrationResult(tool.annotation, "Transpose", "m_step", code, 78.0, ["Review unpivot columns"], output_name=step_name)
+
+        if tool.tool_type == "CrossTab":
+            group_field = tool.config.get("group_field", "region")
+            header_field = tool.config.get("header_field", "category")
+            value_field = tool.config.get("value_field", "sales_amount")
+            code = (
+                f'{step_name} = Table.Pivot({previous}, List.Distinct({previous}[{_m_identifier(header_field)}]), '
+                f'"{_escape_m_text(header_field)}", "{_escape_m_text(value_field)}", List.Sum)'
+            )
+            return MigrationResult(
+                tool.annotation,
+                "CrossTab",
+                "m_step",
+                code,
+                72.0,
+                [f"Verify grouping grain, especially {group_field}"],
+                output_name=step_name,
+            )
+
+        if tool.tool_type == "DataCleansing":
+            fields = tool.config.get("fields") or ["product_name"]
+            transforms = ", ".join(
+                f'{{"{_escape_m_text(field)}", each Text.Trim(Text.Clean(Text.From(_))), type text}}'
+                for field in fields
+            )
+            code = f"{step_name} = Table.TransformColumns({previous}, {{{transforms}}}, null, MissingField.Ignore)"
+            return MigrationResult(tool.annotation, "DataCleansing", "m_step", code, 84.0, [], output_name=step_name)
+
+        if tool.tool_type == "Regex":
+            source_field = tool.config.get("field", "description")
+            output_field = tool.config.get("output", "regex_result")
+            pattern = tool.config.get("pattern", "(.*)")
+            code = (
+                f"// Manual review: Power Query M has no built-in regex replacement; "
+                f'pattern "{_escape_m_text(pattern)}" for {source_field} should produce {output_field}\n'
+                f"{step_name} = {previous}"
+            )
+            return MigrationResult(
+                tool.annotation,
+                "Regex",
+                "m_step",
+                code,
+                55.0,
+                ["Power Query M has no built-in regex replacement; manual rewrite required"],
+                output_name=step_name,
+            )
+
+        if tool.tool_type == "DateTime":
+            source_field = tool.config.get("field", "order_date")
+            output_field = tool.config.get("output") or source_field
+            if output_field == source_field:
+                code = (
+                    f'{step_name} = Table.TransformColumns({previous}, '
+                    f'{{{{"{_escape_m_text(source_field)}", each Date.FromText(Text.From(_)), type date}}}}, '
+                    "null, MissingField.Ignore)"
+                )
+            else:
+                code = (
+                    f'{step_name} = Table.AddColumn({previous}, "{_escape_m_text(output_field)}", '
+                    f"each Date.FromText(Text.From({_m_field(source_field)})), type date)"
+                )
+            return MigrationResult(tool.annotation, "DateTime", "m_step", code, 84.0, [], output_name=step_name)
+
+        if tool.tool_type == "AppendFields":
+            code = f"{step_name} = {previous}"
+            return MigrationResult(
+                tool.annotation,
+                "AppendFields",
+                "m_step",
+                code,
+                62.0,
+                ["Append Fields requires the second branch to be wired manually"],
+                output_name=step_name,
+            )
 
         if tool.tool_type == "Join":
             left_key = tool.config.get("left_key", "join_key")
@@ -799,6 +918,61 @@ def _extract_alteryx_config(tool_type: str, props: ET.Element | None) -> dict:
                 fields.append(field_name)
         return {"select_fields": fields}
 
+    if tool_type == "Unique":
+        fields = [field.get("field") or field.get("name") for field in _iter_tag(props, "UniqueField")]
+        return {"unique_fields": [field for field in fields if field]}
+
+    if tool_type == "Sample":
+        sample = _find_first(props, "Sample")
+        return {"count": sample.get("count", "100") if sample is not None else "100"}
+
+    if tool_type == "RecordID":
+        record_id = _find_first(props, "RecordID")
+        return {
+            "field_name": record_id.get("field", "row_id") if record_id is not None else "row_id",
+            "start": record_id.get("start", "1") if record_id is not None else "1",
+        }
+
+    if tool_type == "TextToColumns":
+        split = _find_first(props, "Split")
+        columns = [column.get("name") for column in _iter_tag(props, "Column")]
+        return {
+            "field": split.get("field", "combined_value") if split is not None else "combined_value",
+            "delimiter": split.get("delimiter", "|") if split is not None else "|",
+            "columns": [column for column in columns if column],
+        }
+
+    if tool_type == "Transpose":
+        fields = [field.get("field") for field in _iter_tag(props, "KeyField")]
+        return {"key_fields": [field for field in fields if field]}
+
+    if tool_type == "CrossTab":
+        cross_tab = _find_first(props, "CrossTab")
+        return {
+            "group_field": cross_tab.get("group", "region") if cross_tab is not None else "region",
+            "header_field": cross_tab.get("header", "category") if cross_tab is not None else "category",
+            "value_field": cross_tab.get("value", "sales_amount") if cross_tab is not None else "sales_amount",
+        }
+
+    if tool_type == "DataCleansing":
+        fields = [field.get("field") for field in _iter_tag(props, "CleanseField")]
+        return {"fields": [field for field in fields if field]}
+
+    if tool_type == "Regex":
+        regex = _find_first(props, "Regex")
+        return {
+            "field": regex.get("field", "description") if regex is not None else "description",
+            "output": regex.get("output", "regex_result") if regex is not None else "regex_result",
+            "pattern": regex.get("pattern", "(.*)") if regex is not None else "(.*)",
+        }
+
+    if tool_type == "DateTime":
+        date_time = _find_first(props, "DateTime")
+        return {
+            "field": date_time.get("field", "order_date") if date_time is not None else "order_date",
+            "output": date_time.get("output", "") if date_time is not None else "",
+        }
+
     if tool_type == "Join":
         left = _find_first(props, "LeftField")
         right = _find_first(props, "RightField")
@@ -822,7 +996,7 @@ def _classify_tableau_field(formula: str) -> str:
             return "lod_include"
         if "EXCLUDE" in text:
             return "lod_exclude"
-    if any(keyword in text for keyword in ("RUNNING_SUM", "WINDOW_SUM", "LOOKUP", "TOTAL(")):
+    if any(keyword in text for keyword in ("RUNNING_SUM", "WINDOW_", "LOOKUP", "TOTAL(", "RANK(")):
         return "table_calc"
     return "basic"
 
@@ -848,6 +1022,18 @@ def _classify_alteryx_tool(tool_attr: str) -> str:
         "Union": "Union",
         "AlteryxSelect": "Select",
         "Select": "Select",
+        "AlteryxUnique": "Unique",
+        "Unique": "Unique",
+        "AlteryxSample": "Sample",
+        "Sample": "Sample",
+        "RecordID": "RecordID",
+        "TextToColumns": "TextToColumns",
+        "Transpose": "Transpose",
+        "CrossTab": "CrossTab",
+        "DataCleansing": "DataCleansing",
+        "Regex": "Regex",
+        "DateTime": "DateTime",
+        "AppendFields": "AppendFields",
     }
     for needle, tool_type in mapping.items():
         if needle in tool_attr:
@@ -911,6 +1097,35 @@ def _translate_table_calc(formula: str, table: str, date_table: str) -> tuple[st
             78.0,
         )
 
+    if "WINDOW_AVG" in text:
+        args = _split_args(_first_function_argument(formula, "WINDOW_AVG") or "")
+        expression = _tableau_agg_to_dax(args[0], table) if args else f"SUM({_dax_column(table, 'sales_amount')})"
+        window_days = _window_days_from_args(args)
+        return (
+            "AVERAGEX("
+            f"DATESINPERIOD('{date_table}'[Date], MAX('{date_table}'[Date]), -{window_days}, DAY), "
+            f"{expression}"
+            ")",
+            64.0,
+        )
+
+    if "WINDOW_SUM" in text:
+        args = _split_args(_first_function_argument(formula, "WINDOW_SUM") or "")
+        expression = _tableau_agg_to_dax(args[0], table) if args else f"SUM({_dax_column(table, 'sales_amount')})"
+        window_days = _window_days_from_args(args)
+        return (
+            "SUMX("
+            f"DATESINPERIOD('{date_table}'[Date], MAX('{date_table}'[Date]), -{window_days}, DAY), "
+            f"{expression}"
+            ")",
+            64.0,
+        )
+
+    if "RANK(" in text:
+        inner = _first_function_argument(formula, "RANK") or "SUM([sales_amount])"
+        expression = _tableau_agg_to_dax(inner, table)
+        return f"RANKX(ALL('{table}'), {expression}, , DESC)", 68.0
+
     if "TOTAL(" in text:
         if "/" in formula:
             numerator_raw, denominator_raw = formula.split("/", 1)
@@ -931,6 +1146,10 @@ def _translate_basic_tableau_formula(formula: str, table: str) -> tuple[str, flo
         return _translate_tableau_if(stripped, table), 82.0
     if re.match(r"^CASE\b", stripped, re.IGNORECASE):
         return _translate_tableau_case(stripped, table), 76.0
+    division = _split_top_level_operator(stripped, "/")
+    if division:
+        left, right = division
+        return f"DIVIDE({_convert_tableau_expr(left, table)}, {_convert_tableau_expr(right, table)})", 88.0
     return _convert_tableau_expr(stripped, table), 90.0
 
 
@@ -956,6 +1175,24 @@ def _translate_tableau_if(formula: str, table: str) -> str:
 
 
 def _translate_tableau_case(formula: str, table: str) -> str:
+    simple_case = re.match(r"CASE\s+(\[[^\]]+\])\s+(.*)\s+END\s*$", formula, re.IGNORECASE | re.DOTALL)
+    if simple_case:
+        field = _convert_tableau_expr(simple_case.group(1), table)
+        body = simple_case.group(2)
+        whens = re.findall(
+            r"WHEN\s+(.*?)\s+THEN\s+(.*?)(?=\s+WHEN|\s+ELSE|$)",
+            body,
+            re.IGNORECASE | re.DOTALL,
+        )
+        else_match = re.search(r"\bELSE\b(.*)$", body, re.IGNORECASE | re.DOTALL)
+        parts = [f"SWITCH({field}"]
+        for value, result in whens:
+            parts.append(f", {_convert_tableau_scalar(value, table)}, {_convert_tableau_scalar(result, table)}")
+        if else_match:
+            parts.append(f", {_convert_tableau_scalar(else_match.group(1), table)}")
+        parts.append(")")
+        return "".join(parts)
+
     whens = re.findall(
         r"WHEN\s+(.*?)\s+THEN\s+(.*?)(?=\s+WHEN|\s+ELSE|\s+END)",
         formula,
@@ -986,28 +1223,36 @@ def _convert_tableau_scalar(value: str, table: str) -> str:
 
 def _convert_tableau_expr(expression: str, table: str) -> str:
     converted = _normalize_tableau_strings(expression)
+    converted = _replace_function_call(
+        converted,
+        "ZN",
+        lambda args: f"COALESCE({_convert_tableau_expr(args[0], table)}, 0)" if args else "BLANK()",
+    )
+    converted = _replace_function_call(
+        converted,
+        "IFNULL",
+        lambda args: f"COALESCE({_convert_tableau_expr(args[0], table)}, {_convert_tableau_expr(args[1], table)})"
+        if len(args) >= 2
+        else _convert_tableau_expr(args[0], table) if args else "BLANK()",
+    )
+    converted = _replace_function_call(
+        converted,
+        "CONTAINS",
+        lambda args: f"CONTAINSSTRING({_convert_tableau_expr(args[0], table)}, {_convert_tableau_scalar(args[1], table)})"
+        if len(args) >= 2
+        else "FALSE()",
+    )
     converted = _tableau_agg_to_dax(converted, table)
     converted = re.sub(
-        r"DATEDIFF\(\s*'day'\s*,\s*(.*?)\s*,\s*TODAY\(\)\s*\)",
-        r"DATEDIFF(\1, TODAY(), DAY)",
+        r"DATEDIFF\(\s*\"(second|minute|hour|day|week|month|quarter|year)\"\s*,\s*(.*?)\s*,\s*TODAY\(\)\s*\)",
+        lambda m: f"DATEDIFF({m.group(2)}, TODAY(), {m.group(1).upper()})",
         converted,
         flags=re.IGNORECASE,
     )
-    converted = re.sub(
-        r"DATEDIFF\(\s*'month'\s*,\s*(.*?)\s*,\s*TODAY\(\)\s*\)",
-        r"DATEDIFF(\1, TODAY(), MONTH)",
-        converted,
-        flags=re.IGNORECASE,
-    )
-    converted = re.sub(
-        r"DATEDIFF\(\s*'year'\s*,\s*(.*?)\s*,\s*TODAY\(\)\s*\)",
-        r"DATEDIFF(\1, TODAY(), YEAR)",
-        converted,
-        flags=re.IGNORECASE,
-    )
+    converted = re.sub(r"\bLEFT\(", "LEFT(", converted, flags=re.IGNORECASE)
+    converted = re.sub(r"\bMID\(", "MID(", converted, flags=re.IGNORECASE)
     converted = re.sub(r"\bAND\b", "&&", converted, flags=re.IGNORECASE)
     converted = re.sub(r"\bOR\b", "||", converted, flags=re.IGNORECASE)
-    converted = re.sub(r"\bZN\(", "COALESCE(", converted, flags=re.IGNORECASE)
     converted = _replace_remaining_tableau_fields(converted, table)
     return converted
 
@@ -1154,6 +1399,59 @@ def _split_args(text: str) -> list[str]:
     return args
 
 
+def _replace_function_call(text: str, function_name: str, replacement) -> str:
+    result = text
+    search_from = 0
+    pattern = re.compile(rf"\b{re.escape(function_name)}\s*\(", re.IGNORECASE)
+    while True:
+        match = pattern.search(result, search_from)
+        if not match:
+            return result
+        open_index = match.end() - 1
+        close_index = _find_matching_paren(result, open_index)
+        if close_index == -1:
+            search_from = match.end()
+            continue
+        args = _split_args(result[match.end() : close_index])
+        new_text = replacement(args)
+        result = result[: match.start()] + new_text + result[close_index + 1 :]
+        search_from = match.start() + len(new_text)
+
+
+def _split_top_level_operator(text: str, operator: str) -> tuple[str, str] | None:
+    depth = 0
+    in_quote = False
+    quote_char = ""
+    for index, char in enumerate(text):
+        if char in {'"', "'"}:
+            if in_quote and char == quote_char:
+                in_quote = False
+            elif not in_quote:
+                in_quote = True
+                quote_char = char
+        elif not in_quote:
+            if char in "({[":
+                depth += 1
+            elif char in ")}]":
+                depth -= 1
+            elif char == operator and depth == 0:
+                return text[:index].strip(), text[index + 1 :].strip()
+    return None
+
+
+def _window_days_from_args(args: list[str]) -> int:
+    if len(args) < 3:
+        return 7
+    try:
+        start = int(args[1])
+        end = int(args[2])
+    except ValueError:
+        return 7
+    if start <= end:
+        return max(1, end - start + 1)
+    return max(1, start - end + 1)
+
+
 def _first_function_argument(formula: str, function_name: str) -> str | None:
     match = re.search(rf"\b{re.escape(function_name)}\s*\(", formula, re.IGNORECASE)
     if not match:
@@ -1200,6 +1498,14 @@ def _summarize_aggregation_to_m(aggregation: dict) -> str:
         return f'{{"{_escape_m_text(name)}", each List.Min([{column}]), type any}}'
     if action in {"count", "countrows"}:
         return f'{{"{_escape_m_text(name)}", each Table.RowCount(_), Int64.Type}}'
+    if action in {"countdistinct", "count_distinct", "distinctcount"}:
+        return f'{{"{_escape_m_text(name)}", each List.Count(List.Distinct([{column}])), Int64.Type}}'
+    if action == "first":
+        return f'{{"{_escape_m_text(name)}", each List.First([{column}]), type any}}'
+    if action == "last":
+        return f'{{"{_escape_m_text(name)}", each List.Last([{column}]), type any}}'
+    if action in {"concatenate", "concat"}:
+        return f'{{"{_escape_m_text(name)}", each Text.Combine(List.Transform([{column}], Text.From), ", "), type text}}'
     return f'{{"{_escape_m_text(name)}", each List.Sum([{column}]), type number}}'
 
 
