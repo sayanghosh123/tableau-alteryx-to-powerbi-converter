@@ -15,6 +15,7 @@ The repo includes a deterministic synthetic proof suite covering **20 Tableau re
 | Evidence | Scope |
 | --- | --- |
 | `scenario_suite.py` | Catalog of 40 domain-neutral synthetic scenarios |
+| `examples/source/tableau` and `examples/source/alteryx` | Checked-in generated fixtures for all 40 scenarios |
 | `tests/test_migrate.py` | End-to-end tests that run every paired Tableau/Alteryx scenario through the CLI |
 | `docs/scenario-coverage.md` | Scenario-by-scenario coverage matrix |
 | `docs/confidence-ratings.md` | Confidence rubric and review expectations |
@@ -27,6 +28,8 @@ The repo includes a deterministic synthetic proof suite covering **20 Tableau re
 .
 ├── examples/
 │   └── source/
+│       ├── tableau/              # 20 checked-in synthetic Tableau scenario workbooks
+│       ├── alteryx/              # 20 checked-in synthetic Alteryx scenario workflows
 │       ├── sales_analytics.twb   # Synthetic Tableau workbook sample
 │       └── order_prep.yxmd       # Synthetic Alteryx workflow sample
 ├── docs/                         # Coverage, confidence, validation, and limitation notes
@@ -134,10 +137,10 @@ python -m unittest discover -s tests -v
 
 The tests compile the CLI, run the sample migration, run 20 paired Tableau/Alteryx scenario cases into temporary folders, and check that generated TMDL/M/report artifacts are structurally coherent and free from restricted sample identifiers.
 
-To materialize the synthetic scenario inputs for inspection:
+The generated synthetic scenario inputs are checked in under `examples/source/tableau` and `examples/source/alteryx`. To regenerate them locally from the catalog:
 
 ```bash
-python scripts/generate_scenarios.py --output generated_scenarios
+python scripts/generate_scenarios.py --output examples/source
 ```
 
 See `docs/using-the-suite.md` for details.

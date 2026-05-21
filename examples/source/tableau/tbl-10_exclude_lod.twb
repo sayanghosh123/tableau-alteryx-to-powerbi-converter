@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workbook version="2024.1">
+  <datasources>
+    <datasource name="tbl-10" caption="EXCLUDE LOD">
+      <connection class="textscan" />
+      <column name="[sales_amount]" caption="sales_amount" datatype="real" role="measure" />
+      <column name="[cost_amount]" caption="cost_amount" datatype="real" role="measure" />
+      <column name="[profit_amount]" caption="profit_amount" datatype="real" role="measure" />
+      <column name="[return_amount]" caption="return_amount" datatype="real" role="measure" />
+      <column name="[order_value]" caption="order_value" datatype="real" role="measure" />
+      <column name="[profit_margin]" caption="profit_margin" datatype="real" role="measure" />
+      <column name="[quantity]" caption="quantity" datatype="integer" role="measure" />
+      <column name="[discount_amount]" caption="discount_amount" datatype="real" role="measure" />
+      <column name="[refund_amount]" caption="refund_amount" datatype="real" role="measure" />
+      <column name="[order_id]" caption="order_id" datatype="string" role="dimension" />
+      <column name="[region]" caption="region" datatype="string" role="dimension" />
+      <column name="[segment]" caption="segment" datatype="string" role="dimension" />
+      <column name="[category]" caption="category" datatype="string" role="dimension" />
+      <column name="[channel]" caption="channel" datatype="string" role="dimension" />
+      <column name="[sku]" caption="sku" datatype="string" role="dimension" />
+      <column name="[notes]" caption="notes" datatype="string" role="dimension" />
+      <column name="[status]" caption="status" datatype="string" role="dimension" />
+      <column name="[order_date]" caption="order_date" datatype="date" role="dimension" />
+      <column name="[Exclude Region Sales]" caption="Exclude Region Sales" datatype="real" role="measure"><calculation class="tableau" formula="{ EXCLUDE [region] : SUM([sales_amount]) }" /></column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name="EXCLUDE LOD" />
+  </worksheets>
+</workbook>

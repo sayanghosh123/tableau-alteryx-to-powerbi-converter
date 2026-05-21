@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AlteryxDocument yxmdVer="2024.1">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Input.Input" />
+      <Properties>
+        <Annotation><Name>Read source CSV</Name></Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Transpose.Transpose" />
+      <Properties>
+        <Annotation><Name>Unpivot metric columns</Name></Annotation>
+        <KeyField field="order_id" />
+        <KeyField field="region" />
+      </Properties>
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Tool="AlteryxBasePluginsGui.CrossTab.CrossTab" />
+      <Properties>
+        <Annotation><Name>Pivot categories</Name></Annotation>
+        <CrossTab group="region" header="category" value="sales_amount" />
+      </Properties>
+    </Node>
+    <Node ToolID="4">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Output.Output" />
+      <Properties>
+        <Annotation><Name>Publish draft output</Name></Annotation>
+      </Properties>
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection><Origin ToolID="1" Connection="Output" /><Destination ToolID="2" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="2" Connection="Output" /><Destination ToolID="3" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="3" Connection="Output" /><Destination ToolID="4" Connection="Input" /></Connection>
+  </Connections>
+</AlteryxDocument>

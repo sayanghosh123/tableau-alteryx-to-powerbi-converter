@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workbook version="2024.1">
+  <datasources>
+    <datasource name="tbl-12" caption="Null handling">
+      <connection class="textscan" />
+      <column name="[sales_amount]" caption="sales_amount" datatype="real" role="measure" />
+      <column name="[cost_amount]" caption="cost_amount" datatype="real" role="measure" />
+      <column name="[profit_amount]" caption="profit_amount" datatype="real" role="measure" />
+      <column name="[return_amount]" caption="return_amount" datatype="real" role="measure" />
+      <column name="[order_value]" caption="order_value" datatype="real" role="measure" />
+      <column name="[profit_margin]" caption="profit_margin" datatype="real" role="measure" />
+      <column name="[quantity]" caption="quantity" datatype="integer" role="measure" />
+      <column name="[discount_amount]" caption="discount_amount" datatype="real" role="measure" />
+      <column name="[refund_amount]" caption="refund_amount" datatype="real" role="measure" />
+      <column name="[order_id]" caption="order_id" datatype="string" role="dimension" />
+      <column name="[region]" caption="region" datatype="string" role="dimension" />
+      <column name="[segment]" caption="segment" datatype="string" role="dimension" />
+      <column name="[category]" caption="category" datatype="string" role="dimension" />
+      <column name="[channel]" caption="channel" datatype="string" role="dimension" />
+      <column name="[sku]" caption="sku" datatype="string" role="dimension" />
+      <column name="[notes]" caption="notes" datatype="string" role="dimension" />
+      <column name="[status]" caption="status" datatype="string" role="dimension" />
+      <column name="[order_date]" caption="order_date" datatype="date" role="dimension" />
+      <column name="[Safe Discount]" caption="Safe Discount" datatype="real" role="measure"><calculation class="tableau" formula="ZN([discount_amount])" /></column>
+      <column name="[Safe Refund]" caption="Safe Refund" datatype="real" role="measure"><calculation class="tableau" formula="IFNULL([refund_amount], 0)" /></column>
+      <column name="[Safe Sales]" caption="Safe Sales" datatype="real" role="measure"><calculation class="tableau" formula="ZN(SUM([sales_amount]))" /></column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name="Null handling" />
+  </worksheets>
+</workbook>

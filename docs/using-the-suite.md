@@ -8,22 +8,29 @@ python -m unittest discover -s tests -v
 
 The full test run materializes synthetic XML into temporary folders, runs the converter, and checks generated TMDL, Power Query M, and HTML reports.
 
-## Generate inspectable fixtures
+## Inspect or regenerate fixtures
 
-To write the 20 Tableau and 20 Alteryx synthetic inputs to disk:
+The 20 Tableau and 20 Alteryx synthetic inputs are checked in under:
 
-```bash
-python scripts/generate_scenarios.py --output generated_scenarios
+```text
+examples/source/tableau/
+examples/source/alteryx/
 ```
 
-`generated_scenarios/` is ignored by Git. Use it for local inspection, demos, or targeted converter debugging.
+To regenerate them from `scenario_suite.py`:
+
+```bash
+python scripts/generate_scenarios.py --output examples/source
+```
+
+For scratch generation, use `--output generated_scenarios`; that folder is ignored by Git.
 
 ## Run one generated pair manually
 
 ```bash
 python migrate.py \
-  --tableau generated_scenarios/tableau/tbl-01_aggregate_arithmetic.twb \
-  --alteryx generated_scenarios/alteryx/alx-01_linear_cleanse_aggregate.yxmd \
+  --tableau examples/source/tableau/tbl-01_aggregate_arithmetic.twb \
+  --alteryx examples/source/alteryx/alx-01_linear_cleanse_aggregate.yxmd \
   --output migrated \
   --reports-dir reports
 ```

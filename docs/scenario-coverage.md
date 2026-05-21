@@ -6,8 +6,8 @@ The scenario suite provides deterministic synthetic inputs for breadth testing. 
 
 | Area | Count | Purpose | Automated proof |
 | --- | ---: | --- | --- |
-| Tableau simulated reports | 20 | Exercise calculated fields, LODs, table calculations, strings, dates, and null handling | `test_twenty_by_twenty_scenario_matrix` |
-| Alteryx simulated workflows | 20 | Exercise common preparation tools, formulas, aggregates, row logic, reshaping, and review scaffolds | `test_twenty_by_twenty_scenario_matrix` |
+| Tableau simulated reports | 20 | Exercise calculated fields, LODs, table calculations, strings, dates, and null handling | Checked in under `examples/source/tableau`; tested by `test_twenty_by_twenty_scenario_matrix` |
+| Alteryx simulated workflows | 20 | Exercise common preparation tools, formulas, aggregates, row logic, reshaping, and review scaffolds | Checked in under `examples/source/alteryx`; tested by `test_twenty_by_twenty_scenario_matrix` |
 | Public-safety checks | 1 | Prevent restricted identifiers and private generated outputs | `test_checked_in_text_is_free_from_restricted_terms` |
 | Smoke checks | 1 | Validate the documented quick-start sample | `test_sample_migration_generates_structural_outputs` |
 

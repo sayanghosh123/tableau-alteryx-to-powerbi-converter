@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AlteryxDocument yxmdVer="2024.1">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Input.Input" />
+      <Properties>
+        <Annotation><Name>Read source CSV</Name></Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Tool="AlteryxBasePluginsGui.DataCleansing.DataCleansing" />
+      <Properties>
+        <Annotation><Name>Clean text</Name></Annotation>
+        <CleanseField field="sku" />
+        <CleanseField field="category" />
+      </Properties>
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Regex.Regex" />
+      <Properties>
+        <Annotation><Name>Extract code</Name></Annotation>
+        <Regex field="sku" output="sku_code" pattern="([A-Z]+)-.*" />
+      </Properties>
+    </Node>
+    <Node ToolID="4">
+      <GuiSettings Tool="AlteryxBasePluginsGui.DateTime.DateTime" />
+      <Properties>
+        <Annotation><Name>Parse order date</Name></Annotation>
+        <DateTime field="order_date" output="order_date" />
+      </Properties>
+    </Node>
+    <Node ToolID="5">
+      <GuiSettings Tool="AlteryxBasePluginsGui.AppendFields.AppendFields" />
+      <Properties>
+        <Annotation><Name>Append lookup fields</Name></Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="6">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Select.Select" />
+      <Properties>
+        <Annotation><Name>Final shape</Name></Annotation>
+        <SelectFields>
+          <SelectField field="order_id" selected="True" />
+          <SelectField field="region" selected="True" />
+          <SelectField field="sku_code" selected="True" />
+          <SelectField field="order_date" selected="True" />
+        </SelectFields>
+      </Properties>
+    </Node>
+    <Node ToolID="7">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Output.Output" />
+      <Properties>
+        <Annotation><Name>Publish draft output</Name></Annotation>
+      </Properties>
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection><Origin ToolID="1" Connection="Output" /><Destination ToolID="2" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="2" Connection="Output" /><Destination ToolID="3" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="3" Connection="Output" /><Destination ToolID="4" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="4" Connection="Output" /><Destination ToolID="5" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="5" Connection="Output" /><Destination ToolID="6" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="6" Connection="Output" /><Destination ToolID="7" Connection="Input" /></Connection>
+  </Connections>
+</AlteryxDocument>

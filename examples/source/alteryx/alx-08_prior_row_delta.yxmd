@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AlteryxDocument yxmdVer="2024.1">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Input.Input" />
+      <Properties>
+        <Annotation><Name>Read source CSV</Name></Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Tool="AlteryxBasePluginsGui.MultiRowFormula.MultiRowFormula" />
+      <Properties>
+        <Annotation><Name>Prior row delta</Name></Annotation>
+        <FormulaFields>
+          <FormulaField field="sales_delta" expression="[sales_amount] - [Row-1:sales_amount]" />
+        </FormulaFields>
+      </Properties>
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Tool="AlteryxBasePluginsGui.Output.Output" />
+      <Properties>
+        <Annotation><Name>Publish draft output</Name></Annotation>
+      </Properties>
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection><Origin ToolID="1" Connection="Output" /><Destination ToolID="2" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="2" Connection="Output" /><Destination ToolID="3" Connection="Input" /></Connection>
+  </Connections>
+</AlteryxDocument>

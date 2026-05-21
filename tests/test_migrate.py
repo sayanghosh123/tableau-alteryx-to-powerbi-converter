@@ -131,6 +131,19 @@ class MigrationCliTests(unittest.TestCase):
         }:
             self.assertIn(required, alteryx_types)
 
+    def test_checked_in_scenario_fixtures_are_materialized(self):
+        tableau_dir = ROOT / "examples" / "source" / "tableau"
+        alteryx_dir = ROOT / "examples" / "source" / "alteryx"
+        self.assertEqual(len(list(tableau_dir.glob("*.twb"))), 20)
+        self.assertEqual(len(list(alteryx_dir.glob("*.yxmd"))), 20)
+
+        for scenario in TABLEAU_SCENARIOS:
+            expected = tableau_dir / f"{scenario.scenario_id.lower()}_{self.slug(scenario.name)}.twb"
+            self.assertTrue(expected.exists(), f"Missing Tableau fixture: {expected}")
+        for scenario in ALTERYX_SCENARIOS:
+            expected = alteryx_dir / f"{scenario.scenario_id.lower()}_{self.slug(scenario.name)}.yxmd"
+            self.assertTrue(expected.exists(), f"Missing Alteryx fixture: {expected}")
+
     def test_twenty_by_twenty_scenario_matrix(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
@@ -202,6 +215,9 @@ class MigrationCliTests(unittest.TestCase):
 
     def assertBalanced(self, text, left, right):
         self.assertEqual(text.count(left), text.count(right), f"Unbalanced {left}{right}")
+
+    def slug(self, value):
+        return "".join(char.lower() if char.isalnum() else "_" for char in value).strip("_")
 
 
 if __name__ == "__main__":
